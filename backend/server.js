@@ -14,6 +14,10 @@ const {
 
 // Import routes
 const challengeRoutes = require('./routes/challenge');
+const pinAuthRoutes = require('./routes/pinAuth');
+
+// Import authentication middleware
+const { validateSession } = require('./middleware/pinAuth');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -123,6 +127,16 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api', challengeRoutes);
+app.use('/api/auth', pinAuthRoutes);
+
+// Example protected route
+app.get('/api/protected-example', validateSession, (req, res) => {
+    res.json({
+        success: true,
+        message: 'This is a protected route',
+        sessionId: req.sessionId.substring(0, 8) + '...'
+    });
+});
 
 // Catch-all for undefined API routes
 app.use('/api/*', (req, res) => {
