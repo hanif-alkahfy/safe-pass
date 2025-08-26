@@ -1,7 +1,7 @@
 const express = require('express');
-const { body, validationResult } = require('express-validator');
-const { pinAuthManager, checkLockout } = require('../middleware/pinAuth');
-
+const { pinAuthManager } = require('../middleware/pinAuth');
+const { challengeManager } = require('../middleware/security');
+const { verifyHMAC } = require('../middleware/hmacAuth');
 const router = express.Router();
 
 // Get master PIN hash from environment (in production, this would be in database)
@@ -16,189 +16,165 @@ const getMasterPinHash = () => {
     return pinAuthManager.hashPin(masterPin);
 };
 
-// POST /api/auth/verify-pin
-// Verify PIN and create authenticated session
-router.post('/verify-pin', 
-    checkLockout,
-    [
-        body('pin')
-            .isLength({ min: 4, max: 12 })
-            .matches(/^\d+$/)
-            .withMessage('PIN must be 4-12 digits'),
-        body('challengeToken')
-            .isLength({ min: 64, max: 64 })
-            .isHexadecimal()
-            .withMessage('Invalid challenge token format'),
-        body('hmac')
-            .isLength({ min: 64, max: 64 })
-            .isHexadecimal()
-            .withMessage('Invalid HMAC format')
-    ],
-    async (req, res) => {
-        try {
-            // Validate input
-            const errors = validationResult(req);
-            if (!errors.isEmpty()) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'VALIDATION_ERROR',
-                    details: errors.array()
-                });
-            }
+/**
+ * POST /api/auth/verify-pin - Verify PIN with HMAC and challenge token
+ * Requires: HMAC verification, valid challenge token, PIN
+ */
+router.post('/verify-pin', verifyHMAC, pinAuthManager.isLockedOut, async (req, res) => {
+    try {
+        const { hashedPin } = req.body;
+        const clientIP = req.ip || req.connection.remoteAddress;
+        const challengeToken = req.challengeToken; // From HMAC middleware
 
-            const { pin, challengeToken, hmac } = req.body;
-            const ip = req.ip || req.connection.remoteAddress;
-            const userAgent = req.get('User-Agent');
+        // Validate challenge token (from HMAC-verified request)
+        if (!challengeManager.validateToken(challengeToken, clientIP)) {
+            return res.status(400).json({
+                error: 'Invalid or expired challenge token',
+                code: 'CHALLENGE_INVALID'
+            });
+        }
 
-            // Validate challenge token (from previous session)
-            // Note: This would integrate with your existing challenge token system
-            // For now, we'll assume it's validated by earlier middleware
+        // Input validation
+        if (!hashedPin || typeof hashedPin !== 'string') {
+            return res.status(400).json({
+                error: 'Missing or invalid hashed PIN',
+                code: 'PIN_INVALID'
+            });
+        }
 
-            // Validate HMAC (from previous session)
-            // Note: This would integrate with your existing HMAC validation
-            // For now, we'll assume it's validated by earlier middleware
+        // Verify PIN
+        const result = await pinAuthManager.verifyPin(hashedPin, clientIP);
 
-            // Get master PIN hash
-            let masterPinHash;
-            try {
-                masterPinHash = getMasterPinHash();
-            } catch (error) {
-                console.error('❌ Master PIN configuration error:', error.message);
-                return res.status(500).json({
-                    success: false,
-                    error: 'SERVER_CONFIG_ERROR',
-                    message: 'Server configuration error'
-                });
-            }
-
-            // Verify PIN
-            const pinValid = pinAuthManager.verifyPin(pin, masterPinHash);
-            
-            if (!pinValid) {
-                // Record failed attempt
-                pinAuthManager.recordFailedAttempt(ip, pin, userAgent);
-                
-                // Check if this attempt caused a lockout
-                const isNowLockedOut = pinAuthManager.isLockedOut(ip);
-                
-                if (isNowLockedOut) {
-                    const lockoutTime = pinAuthManager.getLockoutTimeRemaining(ip);
-                    return res.status(429).json({
-                        success: false,
-                        error: 'IP_LOCKED_OUT',
-                        message: 'Too many failed attempts - account locked',
-                        lockoutRemaining: lockoutTime
-                    });
-                }
-                
-                return res.status(401).json({
-                    success: false,
-                    error: 'INVALID_PIN',
-                    message: 'Invalid PIN'
-                });
-            }
-
-            // PIN is valid - create session
-            const sessionId = pinAuthManager.createSession(ip);
+        if (result.success) {
+            // PIN is correct, create session
+            const sessionId = pinAuthManager.createSession(clientIP);
             
             res.json({
                 success: true,
                 message: 'PIN verified successfully',
-                sessionId,
-                expiresIn: 30 * 60, // 30 minutes in seconds
-                timestamp: Date.now()
+                data: {
+                    sessionId,
+                    expiresAt: Date.now() + pinAuthManager.sessionTimeout
+                }
             });
-
-        } catch (error) {
-            console.error('❌ PIN verification error:', error);
-            res.status(500).json({
+        } else {
+            // PIN is incorrect
+            res.status(401).json({
                 success: false,
-                error: 'SERVER_ERROR',
-                message: 'Internal server error'
+                error: result.message,
+                code: result.code,
+                data: {
+                    attemptsRemaining: result.attemptsRemaining,
+                    lockoutTime: result.lockoutTime
+                }
             });
         }
-    }
-);
 
-// POST /api/auth/logout
-// Invalidate current session
-router.post('/logout', (req, res) => {
-    const sessionId = req.headers['x-session-id'];
-    
-    if (sessionId) {
-        pinAuthManager.invalidateSession(sessionId);
-    }
-    
-    res.json({
-        success: true,
-        message: 'Logged out successfully'
-    });
-});
-
-// GET /api/auth/session-status
-// Check current session status
-router.get('/session-status', (req, res) => {
-    const sessionId = req.headers['x-session-id'];
-    const ip = req.ip || req.connection.remoteAddress;
-    
-    if (!sessionId) {
-        return res.json({
-            success: true,
-            authenticated: false,
-            message: 'No session'
+    } catch (error) {
+        console.error('PIN verification error:', error);
+        res.status(500).json({
+            error: 'PIN verification failed',
+            code: 'VERIFY_ERROR'
         });
     }
-    
-    const valid = pinAuthManager.validateSession(sessionId, ip);
-    
-    res.json({
-        success: true,
-        authenticated: valid,
-        message: valid ? 'Session valid' : 'Session expired'
-    });
 });
 
-// GET /api/auth/lockout-status
-// Check if current IP is locked out
-router.get('/lockout-status', (req, res) => {
-    const ip = req.ip || req.connection.remoteAddress;
-    const isLockedOut = pinAuthManager.isLockedOut(ip);
-    
-    let lockoutRemaining = 0;
-    if (isLockedOut) {
-        lockoutRemaining = pinAuthManager.getLockoutTimeRemaining(ip);
+/**
+ * POST /api/auth/logout - Logout with HMAC verification
+ */
+router.post('/logout', verifyHMAC, (req, res) => {
+    try {
+        const { sessionId } = req.body;
+        const clientIP = req.ip || req.connection.remoteAddress;
+
+        if (!sessionId) {
+            return res.status(400).json({
+                error: 'Missing session ID',
+                code: 'SESSION_MISSING'
+            });
+        }
+
+        const result = pinAuthManager.logout(sessionId, clientIP);
+        
+        res.json({
+            success: true,
+            message: result ? 'Logged out successfully' : 'Session already invalid'
+        });
+
+    } catch (error) {
+        console.error('Logout error:', error);
+        res.status(500).json({
+            error: 'Logout failed',
+            code: 'LOGOUT_ERROR'
+        });
     }
-    
-    res.json({
-        success: true,
-        lockedOut: isLockedOut,
-        lockoutRemaining,
-        retryAfter: Math.ceil(lockoutRemaining / 60) // minutes
-    });
 });
 
-// GET /api/auth/stats (development only)
-// Get authentication statistics
+/**
+ * GET /api/auth/session-status - Check session status (no HMAC required for read-only)
+ */
+router.get('/session-status', (req, res) => {
+    try {
+        const sessionId = req.headers['x-session-id'];
+        const clientIP = req.ip || req.connection.remoteAddress;
+
+        if (!sessionId) {
+            return res.json({
+                success: true,
+                data: {
+                    authenticated: false,
+                    reason: 'No session ID provided'
+                }
+            });
+        }
+
+        const isValid = pinAuthManager.validateSession(sessionId, clientIP);
+        
+        res.json({
+            success: true,
+            data: {
+                authenticated: isValid,
+                sessionId: isValid ? sessionId : null,
+                serverTime: Date.now()
+            }
+        });
+
+    } catch (error) {
+        console.error('Session status error:', error);
+        res.status(500).json({
+            error: 'Session status check failed',
+            code: 'SESSION_ERROR'
+        });
+    }
+});
+
+// Keep existing routes (lockout-status, stats) as they were...
+router.get('/lockout-status', (req, res) => {
+    try {
+        const clientIP = req.ip || req.connection.remoteAddress;
+        const lockoutInfo = pinAuthManager.getLockoutStatus(clientIP);
+        
+        res.json({
+            success: true,
+            data: lockoutInfo
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: 'Lockout status check failed',
+            code: 'LOCKOUT_ERROR'
+        });
+    }
+});
+
 router.get('/stats', (req, res) => {
     if (process.env.NODE_ENV === 'production') {
-        return res.status(404).json({
-            success: false,
-            error: 'NOT_FOUND',
-            message: 'Endpoint not available in production'
-        });
+        return res.status(404).json({ error: 'Not found' });
     }
-    
-    const sessionStats = pinAuthManager.getSessionStats();
-    const failedStats = pinAuthManager.getFailedAttemptsStats();
-    
+
+    const stats = pinAuthManager.getStats();
     res.json({
         success: true,
-        stats: {
-            sessions: sessionStats,
-            failedAttempts: failedStats,
-            uptime: process.uptime(),
-            timestamp: Date.now()
-        }
+        data: stats
     });
 });
 

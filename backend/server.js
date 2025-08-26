@@ -16,8 +16,9 @@ const {
 const challengeRoutes = require('./routes/challenge');
 const pinAuthRoutes = require('./routes/pinAuth');
 
-// Import authentication middleware
+// Import middlewares
 const { validateSession } = require('./middleware/pinAuth');
+const hmacAuthRoutes = require('./routes/hmacAuth');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -128,6 +129,7 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api', challengeRoutes);
 app.use('/api/auth', pinAuthRoutes);
+app.use('/api/hmac', hmacAuthRoutes);
 
 // Example protected route
 app.get('/api/protected-example', validateSession, (req, res) => {
@@ -140,7 +142,7 @@ app.get('/api/protected-example', validateSession, (req, res) => {
 
 // Catch-all for undefined API routes
 app.use('/api/*', (req, res) => {
-  console.log(`❌ 404 - API route not found: ${req.method} ${req.path} from IP: ${req.ip}`);
+  console.log(`404 - API route not found: ${req.method} ${req.path} from IP: ${req.ip}`);
   
   res.status(404).json({
     error: 'API endpoint not found',
@@ -155,7 +157,7 @@ app.use('/api/*', (req, res) => {
 app.use((err, req, res, next) => {
   const requestId = res.getHeader('X-Request-ID');
   
-  console.error(`💥 Global Error Handler [${requestId}]:`, {
+  console.error(`Global Error Handler [${requestId}]:`, {
     error: err.message,
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
     url: req.url,
@@ -193,12 +195,12 @@ app.use('*', (req, res) => {
 
 // Graceful shutdown handling
 process.on('SIGTERM', () => {
-  console.log('🔄 SIGTERM received, shutting down gracefully...');
+  console.log('SIGTERM received, shutting down gracefully...');
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
-  console.log('🔄 SIGINT received, shutting down gracefully...');
+  console.log('SIGINT received, shutting down gracefully...');
   process.exit(0);
 });
 
