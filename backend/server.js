@@ -11,6 +11,7 @@ const hmacAuthRoutes = require("./routes/hmacAuth");
 // Import routes
 const challengeRoutes = require("./routes/challenge");
 const pinAuthRoutes = require("./routes/pinAuth");
+const passwordRoutes = require('./routes/passwordGeneration');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -87,6 +88,7 @@ app.use(
 app.use("/api", challengeRoutes);
 app.use("/api/auth", pinAuthRoutes);
 app.use("/api/hmac", hmacAuthRoutes);
+app.use('/api/password', passwordRoutes);
 
 // Health check endpoint (before rate limiting for monitoring)
 app.get("/health", (req, res) => {
