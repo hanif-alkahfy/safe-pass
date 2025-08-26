@@ -32,40 +32,6 @@ SafePass implements a zero-storage password generation system where:
 └─────────────────┘                  └─────────────────┘
 ```
 
-## 🚀 **Current Development Status**
-
-### ✅ **Completed Features (Day 1-2)**
-
-#### **Backend Core (100% Complete)**
-- [x] **Express Server Setup** - Security-hardened with Helmet, CORS, Rate Limiting
-- [x] **Challenge Token System** - Cryptographically secure tokens with TTL cleanup
-- [x] **PIN Authentication** - bcrypt hashing with IP-based lockout protection
-- [x] **Session Management** - Secure 64-character session IDs with timeout
-- [x] **Security Middleware** - CSRF protection, request logging, suspicious pattern detection
-- [x] **Rate Limiting** - Multi-layer protection (global + endpoint-specific)
-
-#### **Security Features (100% Complete)**
-- [x] **IP Lockout Protection** - 5 failed attempts → 24-hour lockout
-- [x] **Session Timeout** - 30-minute automatic logout
-- [x] **Request Validation** - Comprehensive input sanitization
-- [x] **Memory Management** - Automatic cleanup of expired tokens/sessions
-- [x] **Security Headers** - CSP, frame options, content type protection
-
-#### **Frontend Setup (100% Complete)**
-- [x] **Vite + React 18** - Modern build system with HMR
-- [x] **Tailwind CSS** - Utility-first styling with dark mode
-- [x] **Project Structure** - Component-based architecture ready
-- [x] **Backend Connectivity** - Real-time connection status monitoring
-
-### 🚧 **In Progress (Day 2)**
-
-#### **Next Implementation: HMAC Verification System**
-- [ ] HMAC verification function with SHA-256
-- [ ] HMAC middleware for protected routes  
-- [ ] Challenge token integration in HMAC validation
-- [ ] Complete authentication flow integration
-- [ ] Password generation core logic
-
 ## 🛠️ **Technology Stack**
 
 ### **Backend**
@@ -90,7 +56,7 @@ SafePass implements a zero-storage password generation system where:
 
 ```
 SafePass/
-├── backend/                    # Express.js API Server
+├── backend/                   # Express.js API Server
 │   ├── middleware/
 │   │   ├── security.js        # ✅ Security middleware & challenge tokens
 │   │   └── pinAuth.js         # ✅ PIN authentication & session mgmt
@@ -101,16 +67,16 @@ SafePass/
 │   ├── package.json           # ✅ Backend dependencies
 │   └── .env.example           # ✅ Environment configuration
 │
-├── frontend/                   # React + Vite Client
+├── frontend/                  # React + Vite Client
 │   ├── src/
 │   │   ├── components/        # 🚧 UI components (ready for dev)
-│   │   ├── hooks/            # 🚧 Custom React hooks
-│   │   ├── utils/            # 🚧 Client-side utilities
-│   │   ├── App.jsx           # ✅ Main app component
-│   │   └── main.jsx          # ✅ React 18 root
-│   ├── vite.config.js        # ✅ Vite configuration
-│   ├── tailwind.config.js    # ✅ Tailwind with dark mode
-│   └── package.json          # ✅ Frontend dependencies
+│   │   ├── hooks/             # 🚧 Custom React hooks
+│   │   ├── utils/             # 🚧 Client-side utilities
+│   │   ├── App.jsx            # ✅ Main app component
+│   │   └── main.jsx           # ✅ React 18 root
+│   ├── vite.config.js         # ✅ Vite configuration
+│   ├── tailwind.config.js     # ✅ Tailwind with dark mode
+│   └── package.json           # ✅ Frontend dependencies
 │
 └── docs/                      # 📚 Documentation
     └── development_log.md     # ✅ Detailed development log
@@ -135,13 +101,13 @@ Rate Limiting Check
     ↓
 Challenge Token Generation
     ↓
-HMAC Verification (🚧 Next)
+HMAC Verification 
     ↓
-PIN Authentication ✅
+PIN Authentication 
     ↓
-Session Creation ✅
+Session Creation 
     ↓
-Password Generation (🚧 Coming)
+Password Generation 
 ```
 
 ### **Implemented Security Measures**
@@ -216,57 +182,289 @@ VITE_API_URL=http://localhost:3001
 VITE_APP_NAME=SafePass
 ```
 
-## 📡 **API Documentation**
+# SafePass API Documentation
 
-### **Authentication Endpoints**
+## Authentication Endpoints
 
-#### **Get Challenge Token**
+### Get Challenge Token
 ```http
 GET /api/challenge
 ```
+
 **Response:**
 ```json
 {
   "success": true,
-  "token": "a1b2c3...64chars",
-  "expiresIn": 300,
-  "csrfToken": "csrf_token_here"
+  "data": {
+    "token": "a1b2c3d4e5f6789abcdef...64chars",
+    "expiresAt": 1640995200000,
+    "serverTime": 1640994900000
+  }
 }
 ```
 
-#### **Verify PIN**
+**Features:**
+- 64-character hex tokens (32 bytes entropy)
+- 5-minute expiry with automatic cleanup
+- One-time use validation
+- IP-based token binding
+- Rate limited: 20 requests/5 minutes
+
+---
+
+### Verify PIN (HMAC Protected)
 ```http
 POST /api/auth/verify-pin
 Content-Type: application/json
+X-HMAC-Signature: hmac_sha256_signature_hex
+X-Timestamp: timestamp_in_milliseconds
+X-Challenge-Token: challenge_token_from_above
+```
 
+**Request Body:**
+```json
 {
-  "pin": "123456",
-  "challengeToken": "challenge_token_here",
-  "hmac": "hmac_signature_here"
+  "hashedPin": "sha256_hashed_pin_hex"
 }
 ```
+
+**HMAC Generation:**
+Client must generate HMAC-SHA256 using:
+- Data: JSON.stringify(request_body)
+- Message: `${data}|${challenge_token}|${timestamp}`
+- Key: SERVER_SECRET (configured server-side)
 
 **Success Response:**
 ```json
 {
   "success": true,
   "message": "PIN verified successfully",
-  "sessionId": "session_id_here",
-  "expiresIn": 1800
+  "data": {
+    "sessionId": "64char_secure_session_id",
+    "expiresAt": 1640996700000
+  }
 }
 ```
 
-#### **Check Session Status**
-```http
-GET /api/auth/session-status
-X-Session-Id: your_session_id_here
+**Error Responses:**
+```json
+// Invalid PIN
+{
+  "success": false,
+  "error": "Invalid PIN",
+  "code": "PIN_INCORRECT",
+  "data": {
+    "attemptsRemaining": 4,
+    "lockoutTime": null
+  }
+}
+
+// Account locked
+{
+  "success": false,
+  "error": "Account locked due to too many failed attempts",
+  "code": "ACCOUNT_LOCKED",
+  "data": {
+    "attemptsRemaining": 0,
+    "lockoutTime": 1640995200000
+  }
+}
+
+// HMAC verification failed
+{
+  "error": "Invalid HMAC signature",
+  "code": "HMAC_INVALID"
+}
 ```
 
-#### **Logout**
+**Security Features:**
+- bcrypt PIN hashing with 12 salt rounds
+- Failed attempt tracking (5 attempts → 24-hour lockout)
+- HMAC request integrity verification
+- Challenge token validation required
+- Session creation with 30-minute timeout
+
+---
+
+### Check Session Status
 ```http
-POST /api/auth/logout  
-X-Session-Id: your_session_id_here
+GET /api/auth/session-status
+X-Session-Id: session_id_from_login
 ```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "authenticated": true,
+    "sessionId": "session_id_here",
+    "serverTime": 1640994900000
+  }
+}
+```
+
+**Features:**
+- No HMAC required (read-only endpoint)
+- IP validation for session security
+- Automatic timeout handling
+
+---
+
+### Logout (HMAC Protected)
+```http
+POST /api/auth/logout
+Content-Type: application/json
+X-HMAC-Signature: hmac_signature
+X-Timestamp: timestamp
+X-Challenge-Token: challenge_token
+```
+
+**Request Body:**
+```json
+{
+  "sessionId": "session_id_to_invalidate"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Logged out successfully"
+}
+```
+
+---
+
+### Check Lockout Status
+```http
+GET /api/auth/lockout-status
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "isLocked": false,
+    "attemptsRemaining": 5,
+    "lockoutExpiresAt": null,
+    "nextAttemptAllowedAt": null
+  }
+}
+```
+
+## HMAC Testing Endpoints (Development Only)
+
+### Get HMAC Statistics
+```http
+GET /api/hmac/stats
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "hmacStats": {
+      "totalRequests": 150,
+      "validHMACs": 145,
+      "invalidHMACs": 3,
+      "expiredRequests": 2,
+      "malformedRequests": 0,
+      "successRate": "96.67%"
+    },
+    "serverTime": 1640994900000,
+    "windowSize": 300000
+  }
+}
+```
+
+### Test HMAC Generation
+```http
+POST /api/hmac/test
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "data": "test-data",
+  "challengeToken": "challenge_token_here",
+  "timestamp": 1640994900000
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "originalData": "test-data",
+    "challengeToken": "challenge_token_here",
+    "timestamp": 1640994900000,
+    "generatedHMAC": "hmac_signature_hex",
+    "verificationResult": true,
+    "timestampValid": true,
+    "serverTime": 1640994900000
+  }
+}
+```
+
+## Rate Limiting
+
+### Global Rate Limits
+- **All endpoints:** 100 requests per 15 minutes
+- **Challenge endpoint:** 20 requests per 5 minutes  
+- **Failed login attempts:** 5 attempts → 24-hour IP lockout
+
+### Rate Limit Headers
+All responses include:
+```http
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 1640995200
+```
+
+## Security Headers
+
+All responses include comprehensive security headers:
+```http
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+X-XSS-Protection: 1; mode=block
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Content-Security-Policy: default-src 'self'
+Referrer-Policy: strict-origin-when-cross-origin
+X-Request-ID: unique-request-identifier
+```
+
+## Error Handling
+
+### Standard Error Format
+```json
+{
+  "error": "Human readable error message",
+  "code": "MACHINE_READABLE_ERROR_CODE",
+  "timestamp": 1640994900000,
+  "requestId": "unique-request-id"
+}
+```
+
+### Common Error Codes
+- `RATE_LIMIT_EXCEEDED` - Too many requests
+- `HMAC_MISSING` - Missing HMAC signature
+- `HMAC_INVALID` - Invalid HMAC signature
+- `TIMESTAMP_INVALID` - Invalid or missing timestamp
+- `TIMESTAMP_EXPIRED` - Request outside time window
+- `CHALLENGE_MISSING` - Missing challenge token
+- `CHALLENGE_INVALID` - Invalid or expired challenge token
+- `PIN_INVALID` - Invalid PIN format
+- `PIN_INCORRECT` - Incorrect PIN
+- `ACCOUNT_LOCKED` - Account locked due to failed attempts
+- `SESSION_MISSING` - Missing session ID
+- `SESSION_INVALID` - Invalid or expired session
 
 ### **Development Endpoints**
 - `GET /api/challenge/stats` - Challenge token statistics
@@ -303,39 +501,6 @@ for i in {1..6}; do
     -d '{"pin":"wrong","challengeToken":"dummy","hmac":"dummy"}'
 done
 ```
-
-## 📋 **Development Roadmap**
-
-### **Week 1 Sprint Progress**
-
-#### **Days 1-2: Backend Foundation ✅ COMPLETED**
-- [x] Project setup and structure
-- [x] Security middleware implementation  
-- [x] Challenge token system
-- [x] PIN authentication with session management
-
-#### **Day 2 (Afternoon): HMAC Verification 🚧 IN PROGRESS**
-- [ ] HMAC verification middleware
-- [ ] Protected route integration
-- [ ] Complete authentication flow
-
-#### **Days 3-4: Frontend & Integration 📅 PLANNED**
-- [ ] React UI components (PIN input, platform selector)
-- [ ] Frontend authentication flow
-- [ ] Password generation integration
-- [ ] Mobile-responsive design
-
-#### **Days 5-6: Advanced Features 📅 PLANNED**
-- [ ] Password strength indicators
-- [ ] Platform presets (Gmail, Discord, etc.)
-- [ ] Export functionality
-- [ ] Comprehensive testing
-
-#### **Day 7: Deployment Prep 📅 PLANNED**
-- [ ] Production configuration
-- [ ] Security audit
-- [ ] Documentation completion
-- [ ] Deployment setup
 
 ## 🤝 **Contributing**
 
