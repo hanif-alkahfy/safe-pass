@@ -55,11 +55,7 @@ const HomePage = () => {
       const message = `${bodyString}|${challengeToken}|${timestamp}`;
       const hmacSignature = HmacSHA256(message, SALT_SECRET).toString();
 
-      // Debug logging
-      console.log("Selected Platform:", selectedPlatform);
-      console.log("Request Body:", requestBody);
-      console.log("Challenge Token:", challengeToken);
-      console.log("HMAC Message:", message);
+      // Production-ready HMAC generation without debug logs
 
       const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/password/generate-password`, {
         method: "POST",

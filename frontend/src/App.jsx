@@ -43,7 +43,7 @@ function App() {
           setBackendStatus("error");
         }
       } catch (error) {
-        console.log("Backend not yet available:", error.message);
+        // Silent fail in production
         setBackendStatus("disconnected");
       }
     };
