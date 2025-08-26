@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import crypto from "crypto-js";
+import { HmacSHA256 } from "crypto-js";
 import { authService } from "../services/authService";
 import PlatformSelector, { platforms } from "../components/PlatformSelector";
 import PasswordDisplay from "../components/PasswordDisplay";
 
 // Should match the secret in authService
-const SERVER_SECRET = "server_pin_secret_9sd8f7a";
+const SALT_SECRET = import.meta.env.VITE_SALT_SECRET;
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -42,19 +42,18 @@ const HomePage = () => {
       const timestamp = Date.now();
       const requestBody = {
         masterPassword,
-        platform: selectedPlatform.id, // Using id instead of key
-        accountIdentifier: localStorage.getItem("sessionId") || "default",
+        platform: selectedPlatform.id,
       };
 
       // Validate required parameters
-      if (!requestBody.masterPassword || !requestBody.platform || !requestBody.accountIdentifier) {
+      if (!requestBody.masterPassword || !requestBody.platform) {
         throw new Error("Missing required parameters");
       }
 
       // Generate HMAC signature
       const bodyString = JSON.stringify(requestBody);
       const message = `${bodyString}|${challengeToken}|${timestamp}`;
-      const hmacSignature = crypto.HmacSHA256(message, SERVER_SECRET).toString();
+      const hmacSignature = HmacSHA256(message, SALT_SECRET).toString();
 
       // Debug logging
       console.log("Selected Platform:", selectedPlatform);
@@ -103,8 +102,10 @@ const HomePage = () => {
       <header className="bg-gray-900/80 backdrop-blur-sm border-b border-gray-700">
         <div className="container mx-auto px-4 py-6 flex justify-between items-center">
           <h1 className="text-3xl font-bold text-white">🔐 SafePass</h1>
-          <button onClick={handleLogout} className="px-4 py-2 text-white bg-red-500 hover:bg-red-600 rounded">
-            Logout
+          <button onClick={handleLogout} className="p-2 text-white bg-red-500 hover:bg-red-600 rounded-lg transition-all duration-200 hover:scale-105" title="Exit">
+            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
           </button>
         </div>
       </header>

@@ -78,15 +78,6 @@ const PinPad = ({ onPinSubmit, error }) => {
           </button>
         ))}
       </div>
-      {/* Keyboard instruction */}
-      <div className="mt-6 text-center text-sm text-gray-400">
-        <p>Use keyboard to enter PIN</p>
-        <p className="mt-1">
-          <kbd className="px-2 py-1 text-xs bg-gray-700 rounded">ESC</kbd> to clear
-          {" • "}
-          <kbd className="px-2 py-1 text-xs bg-gray-700 rounded">←</kbd> to delete
-        </p>
-      </div>
     </div>
   );
 };

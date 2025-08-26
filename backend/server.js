@@ -11,7 +11,7 @@ const hmacAuthRoutes = require("./routes/hmacAuth");
 // Import routes
 const challengeRoutes = require("./routes/challenge");
 const pinAuthRoutes = require("./routes/pinAuth");
-const passwordRoutes = require('./routes/passwordGeneration');
+const passwordRoutes = require("./routes/passwordGeneration");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -38,7 +38,7 @@ app.use(enhancedSecurityHeaders);
 // CORS configuration for Vite dev server
 app.use(
   cors({
-    origin: '*', // Allow all origins in development
+    origin: "*", // Allow all origins in development
     credentials: true,
     methods: ["GET", "POST", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Challenge-Token", "X-HMAC-Signature", "X-CSRF-Token", "X-Session-Token", "X-Timestamp", "X-Session-Id"],
@@ -88,10 +88,16 @@ app.use(
 app.use("/api", challengeRoutes);
 app.use("/api/auth", pinAuthRoutes);
 app.use("/api/hmac", hmacAuthRoutes);
-app.use('/api/password', passwordRoutes);
+app.use("/api/password", passwordRoutes);
 
-// Health check endpoint (before rate limiting for monitoring)
-app.get("/health", (req, res) => {
+// Health check endpoint with its own rate limiter
+const healthCheckLimiter = createAdvancedRateLimiter({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 30, // allow 30 requests per minute for health checks
+  message: "Too many health check requests",
+});
+
+app.get("/health", healthCheckLimiter, (req, res) => {
   const uptime = process.uptime();
   const memoryUsage = process.memoryUsage();
 

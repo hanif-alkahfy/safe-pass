@@ -16,22 +16,20 @@ router.post("/generate-password", validateSession, verifyHMAC, async (req, res) 
     console.log(`[${new Date().toISOString()}] Password generation request from IP: ${req.ip}`);
 
     // Extract and validate parameters
-    const { masterPassword, platform, accountIdentifier, passwordLength, passwordRules, iterations } = req.body;
+    const { masterPassword, platform, passwordLength, passwordRules, iterations } = req.body;
 
     // Validate input parameters
-    // Validate required parameters
-    if (!masterPassword || !platform || !accountIdentifier) {
+    if (!masterPassword || !platform) {
       return res.status(400).json({
         success: false,
         error: "Missing required parameters",
-        details: "masterPassword, platform, and accountIdentifier are required",
+        details: "masterPassword and platform are required",
       });
     }
 
     const validation = passwordGeneration.validateParameters({
       masterPassword,
       platform,
-      accountIdentifier,
       passwordLength,
       passwordRules,
     });
@@ -46,7 +44,7 @@ router.post("/generate-password", validateSession, verifyHMAC, async (req, res) 
     }
 
     const result = await passwordGeneration
-      .generatePassword(masterPassword, platform, accountIdentifier, {
+      .generatePassword(masterPassword, platform, {
         passwordLength: passwordLength ? parseInt(passwordLength) : undefined,
         passwordRules,
         iterations: iterations ? parseInt(iterations) : undefined,
