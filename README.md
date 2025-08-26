@@ -187,7 +187,7 @@ VITE_APP_NAME=SafePass
 GET /api/challenge
 ```
 
-**Request**
+**Request:**
 ```http
 Method: GET
 Headers: none
@@ -220,7 +220,7 @@ Body: none
 POST /api/auth/verify-pin
 ```
 
-**Request**
+**Request:**
 ```http
 Method: GET
 Headers: Content-Type: application/json
@@ -289,7 +289,7 @@ Body:
 GET /api/auth/session-status
 ```
 
-**Request**
+**Request:**
 ```http
 Method: GET
 Headers: X-Session-Id: session_id_from_login
@@ -320,7 +320,7 @@ Body: none
 POST /api/auth/verify-pin
 ```
 
-**Request**
+**Request:**
 ```http
 Method: GET
 Headers: Content-Type: application/json
@@ -347,7 +347,7 @@ Body:
 GET /api/auth/lockout-status
 ```
 
-**Request**
+**Request:**
 ```http
 Method: GET
 Headers: none
