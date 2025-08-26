@@ -2,11 +2,11 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { HmacSHA256 } from "crypto-js";
 import { authService } from "../services/authService";
-import PlatformSelector, { platforms } from "../components/PlatformSelector";
+import PlatformSelector from "../components/PlatformSelector";
 import PasswordDisplay from "../components/PasswordDisplay";
 
 // Should match the secret in authService
-const SALT_SECRET = import.meta.env.VITE_SALT_SECRET;
+const SECRET = import.meta.env.VITE_SECRET;
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -53,11 +53,11 @@ const HomePage = () => {
       // Generate HMAC signature
       const bodyString = JSON.stringify(requestBody);
       const message = `${bodyString}|${challengeToken}|${timestamp}`;
-      const hmacSignature = HmacSHA256(message, SALT_SECRET).toString();
+      const hmacSignature = HmacSHA256(message, SECRET).toString();
 
       // Production-ready HMAC generation without debug logs
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/password/generate-password`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/password/generate-password`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

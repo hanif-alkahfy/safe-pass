@@ -79,11 +79,6 @@ function App() {
     }
   };
 
-  const handleLogout = async () => {
-    await authService.logout();
-    window.location.href = "/auth";
-  };
-
   const StatusIndicator = () => (
     <div
       className={`fixed bottom-4 right-4 font-medium ${getStatusColor()} 

@@ -2,7 +2,7 @@ const crypto = require("crypto");
 
 class HMACManager {
   constructor() {
-    this.serverSecret = process.env.HMAC_SECRET || "default-secret-key-change-in-production";
+    this.serverSecret = process.env.HMAC_SECRET;
     this.hmacAlgorithm = "sha256";
     this.requestWindow = parseInt(process.env.HMAC_WINDOW) || 300000; // 5 minutes default
     this.statistics = {

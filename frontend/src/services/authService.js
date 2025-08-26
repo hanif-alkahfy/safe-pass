@@ -1,7 +1,7 @@
 import crypto from "crypto-js";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL?.replace("/api", "") || "http://localhost:3001";
-const SALT_SECRET = import.meta.env.VITE_SALT_SECRET;
+const SECRET = import.meta.env.VITE_SECRET;
 
 export const authService = {
   async getChallengeToken() {
@@ -28,7 +28,7 @@ export const authService = {
     const message = `${bodyString}|${challengeToken}|${timestamp}`;
 
     // Generate HMAC
-    const hmacSignature = crypto.HmacSHA256(message, SALT_SECRET).toString();
+    const hmacSignature = crypto.HmacSHA256(message, SECRET).toString();
 
     return {
       requestBody: requestBodyObj,
@@ -108,7 +108,7 @@ export const authService = {
       const bodyString = JSON.stringify(requestBody);
       const message = `${bodyString}|${challengeToken}|${timestamp}`;
 
-      const hmacSignature = crypto.HmacSHA256(message, SALT_SECRET).toString();
+      const hmacSignature = crypto.HmacSHA256(message, SECRET).toString();
 
       const response = await fetch(`${API_BASE}/api/auth/logout`, {
         method: "POST",
