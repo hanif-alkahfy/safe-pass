@@ -1,24 +1,21 @@
-// backend/server.js
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 require('dotenv').config();
 
-// Import security middleware
+// Import middlewares
 const {
   createAdvancedRateLimiter,
   trackFailedAttempts,
   enhancedSecurityHeaders,
   securityLogger
 } = require('./middleware/security');
+const { validateSession } = require('./middleware/pinAuth');
+const hmacAuthRoutes = require('./routes/hmacAuth');
 
 // Import routes
 const challengeRoutes = require('./routes/challenge');
 const pinAuthRoutes = require('./routes/pinAuth');
-
-// Import middlewares
-const { validateSession } = require('./middleware/pinAuth');
-const hmacAuthRoutes = require('./routes/hmacAuth');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -95,7 +92,8 @@ app.use(globalRateLimiter);
 app.use(express.json({ 
   limit: '10kb',
   strict: true,
-  type: 'application/json'
+  type: 'application/json',
+  verify: (req, res, buf) => { req.rawBody = buf.toString('utf8'); }
 }));
 
 app.use(express.urlencoded({ 
@@ -103,6 +101,11 @@ app.use(express.urlencoded({
   limit: '10kb',
   parameterLimit: 20 
 }));
+
+// API Routes
+app.use('/api', challengeRoutes);
+app.use('/api/auth', pinAuthRoutes);
+app.use('/api/hmac', hmacAuthRoutes);
 
 // Health check endpoint (before rate limiting for monitoring)
 app.get('/health', (req, res) => {
@@ -125,11 +128,6 @@ app.get('/health', (req, res) => {
     })
   });
 });
-
-// API Routes
-app.use('/api', challengeRoutes);
-app.use('/api/auth', pinAuthRoutes);
-app.use('/api/hmac', hmacAuthRoutes);
 
 // Example protected route
 app.get('/api/protected-example', validateSession, (req, res) => {

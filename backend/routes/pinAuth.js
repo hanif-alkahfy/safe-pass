@@ -1,6 +1,7 @@
 const express = require('express');
-const { pinAuthManager } = require('../middleware/pinAuth');
-const { challengeManager } = require('../middleware/security');
+const crypto = require('crypto');
+const { pinAuthManager, checkLockout } = require('../middleware/pinAuth');
+const { challengeTokenManager } = require('../middleware/security');
 const { verifyHMAC } = require('../middleware/hmacAuth');
 const router = express.Router();
 
@@ -16,56 +17,68 @@ const getMasterPinHash = () => {
     return pinAuthManager.hashPin(masterPin);
 };
 
+// Hash PIN with HMAC
+const hashPinWithHMAC = (pin) => {
+  const secret = process.env.SERVER_SECRET; // SAMA dgn client
+  if (!secret) throw new Error('SERVER_SECRET not configured');
+  return crypto.createHmac('sha256', secret).update(pin).digest('hex');
+};
+
 /**
  * POST /api/auth/verify-pin - Verify PIN with HMAC and challenge token
  * Requires: HMAC verification, valid challenge token, PIN
  */
-router.post('/verify-pin', verifyHMAC, pinAuthManager.isLockedOut, async (req, res) => {
+router.post('/verify-pin', verifyHMAC, checkLockout, async (req, res) => {
     try {
-        const { hashedPin } = req.body;
+        const { pin } = req.body;
         const clientIP = req.ip || req.connection.remoteAddress;
         const challengeToken = req.challengeToken; // From HMAC middleware
 
         // Validate challenge token (from HMAC-verified request)
-        if (!challengeManager.validateToken(challengeToken, clientIP)) {
+        const validation = challengeTokenManager.validateToken(challengeToken, req);
+        if (!validation.valid) {
             return res.status(400).json({
                 error: 'Invalid or expired challenge token',
-                code: 'CHALLENGE_INVALID'
+                code: 'CHALLENGE_INVALID',
+                reason: validation.reason
             });
         }
 
         // Input validation
-        if (!hashedPin || typeof hashedPin !== 'string') {
+        if (!pin || typeof pin !== 'string') {
             return res.status(400).json({
-                error: 'Missing or invalid hashed PIN',
+                error: 'Missing or invalid PIN',
                 code: 'PIN_INVALID'
             });
         }
 
-        // Verify PIN
-        const result = await pinAuthManager.verifyPin(hashedPin, clientIP);
+        // Ambil hash master PIN dari env
+        const masterHash = process.env.MASTER_PIN_HASH;
+        if (!masterHash) {
+            throw new Error("MASTER_PIN_HASH not set in .env");
+        }
 
-        if (result.success) {
-            // PIN is correct, create session
+        // Verifikasi dengan bcrypt
+        const bcrypt = require('bcryptjs');
+        if (bcrypt.compareSync(pin.toString(), masterHash)) {
             const sessionId = pinAuthManager.createSession(clientIP);
-            
-            res.json({
+            return res.json({
                 success: true,
                 message: 'PIN verified successfully',
                 data: {
                     sessionId,
-                    expiresAt: Date.now() + pinAuthManager.sessionTimeout
+                    expiresAt: Date.now() + pinAuthManager.SESSION_TIMEOUT
                 }
             });
         } else {
-            // PIN is incorrect
-            res.status(401).json({
+            pinAuthManager.recordFailedAttempt(clientIP, null, req.get('User-Agent'));
+            return res.status(401).json({
                 success: false,
-                error: result.message,
-                code: result.code,
+                error: 'Invalid PIN',
+                code: 'PIN_INVALID',
                 data: {
-                    attemptsRemaining: result.attemptsRemaining,
-                    lockoutTime: result.lockoutTime
+                    attemptsRemaining: pinAuthManager.MAX_ATTEMPTS,
+                    lockoutTime: pinAuthManager.getLockoutTimeRemaining(clientIP)
                 }
             });
         }
@@ -94,7 +107,7 @@ router.post('/logout', verifyHMAC, (req, res) => {
             });
         }
 
-        const result = pinAuthManager.logout(sessionId, clientIP);
+        const result = pinAuthManager.invalidateSession(sessionId);
         
         res.json({
             success: true,
@@ -148,7 +161,9 @@ router.get('/session-status', (req, res) => {
     }
 });
 
-// Keep existing routes (lockout-status, stats) as they were...
+/**
+ * GET /api/auth/lockout-status - Check lockout status (no HMAC required for read-only)
+ */
 router.get('/lockout-status', (req, res) => {
     try {
         const clientIP = req.ip || req.connection.remoteAddress;
@@ -166,12 +181,15 @@ router.get('/lockout-status', (req, res) => {
     }
 });
 
+/**
+ * GET /api/auth/stats - Get session statistics (dev only)
+ */
 router.get('/stats', (req, res) => {
     if (process.env.NODE_ENV === 'production') {
         return res.status(404).json({ error: 'Not found' });
     }
 
-    const stats = pinAuthManager.getStats();
+    const stats = pinAuthManager.getSessionStats();
     res.json({
         success: true,
         data: stats

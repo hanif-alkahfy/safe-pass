@@ -27,13 +27,18 @@ class PinAuthManager {
         return bcrypt.hashSync(pin.toString(), saltRounds);
     }
 
-    // Verify PIN against hash
-    verifyPin(pin, hash) {
-        return bcrypt.compareSync(pin.toString(), hash);
+    // Verify hashed PIN (HMAC-SHA256)
+    verifyHashedPin(hashedPinFromClient) {
+        const expectedHash = crypto
+            .createHmac('sha256', process.env.SERVER_SECRET)
+            .update(process.env.MASTER_PIN.toString())
+            .digest('hex');
+
+        return expectedHash === hashedPinFromClient;
     }
 
     // Check if IP is locked out
-    isLockedOut(ip) {
+    getLockoutStatus(ip) {
         const attempts = this.failedAttempts.get(ip);
         if (!attempts) return false;
         
@@ -222,7 +227,7 @@ const pinAuthManager = new PinAuthManager();
 const checkLockout = (req, res, next) => {
     const ip = req.ip || req.connection.remoteAddress;
     
-    if (pinAuthManager.isLockedOut(ip)) {
+    if (pinAuthManager.getLockoutStatus(ip)) {
         const remainingTime = pinAuthManager.getLockoutTimeRemaining(ip);
         
         return res.status(429).json({

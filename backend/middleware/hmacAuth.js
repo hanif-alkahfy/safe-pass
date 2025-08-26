@@ -135,9 +135,9 @@ function verifyHMAC(req, res, next) {
         }
 
         // Prepare data for HMAC verification
-        const requestData = req.method === 'GET' 
-            ? req.originalUrl 
-            : JSON.stringify(req.body || {});
+        const requestData = req.method === 'GET'
+            ? req.originalUrl
+            : (req.rawBody || JSON.stringify(req.body || {}));
 
         // Verify HMAC signature
         const isValid = hmacManager.verifyHMAC(

@@ -56,7 +56,7 @@ router.get('/challenge', challengeRateLimiter, (req, res) => {
     res.status(200).json(response);
     
   } catch (error) {
-    console.error('❌ Error generating challenge token:', error);
+    console.error('Error generating challenge token:', error);
     
     res.status(500).json({
       error: 'Failed to generate challenge token',
@@ -84,7 +84,7 @@ router.get('/challenge/stats', (req, res) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('❌ Error getting token stats:', error);
+    console.error('Error getting token stats:', error);
     
     res.status(500).json({
       error: 'Failed to get token statistics',
