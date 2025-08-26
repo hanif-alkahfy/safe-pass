@@ -226,10 +226,11 @@ const pinAuthManager = new PinAuthManager();
 // Middleware to check if IP is locked out
 const checkLockout = (req, res, next) => {
     const ip = req.ip || req.connection.remoteAddress;
-    
-    if (pinAuthManager.getLockoutStatus(ip)) {
+
+    const locked = pinAuthManager.getLockoutStatus(ip);
+    if (locked) {
         const remainingTime = pinAuthManager.getLockoutTimeRemaining(ip);
-        
+
         return res.status(429).json({
             success: false,
             error: 'IP_LOCKED_OUT',
@@ -238,9 +239,10 @@ const checkLockout = (req, res, next) => {
             retryAfter: Math.ceil(remainingTime / 60) // minutes
         });
     }
-    
+
     next();
 };
+
 
 // Middleware to validate existing session
 const validateSession = (req, res, next) => {

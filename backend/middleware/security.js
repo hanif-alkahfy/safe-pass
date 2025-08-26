@@ -93,10 +93,12 @@ const trackFailedAttempts = (req, res, next) => {
 
   // Add method to clear failed attempts (on successful auth)
   req.clearFailedAttempts = () => {
-    if (failedAttempts.has(clientIP)) {
-      failedAttempts.delete(clientIP);
-      console.log(`✅ Cleared failed attempts for IP: ${clientIP}`);
+    const attempt = failedAttempts.get(clientIP);
+    if (attempt && attempt.lockedUntil && Date.now() < attempt.lockedUntil) {
+      console.log(`⛔ Tidak bisa reset karena IP ${clientIP} masih terkunci`);
+      return;
     }
+    failedAttempts.delete(clientIP);
   };
 
   next();
