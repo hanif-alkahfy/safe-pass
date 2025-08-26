@@ -187,12 +187,6 @@ VITE_APP_NAME=SafePass
 GET /api/challenge
 ```
 
-**Request:**
-```http
-Headers: none
-Body: none
-```
-
 **Response:**
 ```json
 {
@@ -286,13 +280,6 @@ Headers: Content-Type: application/json
 GET /api/auth/session-status
 ```
 
-**Request:**
-```http
-Method: GET
-Headers: X-Session-Id: session_id_from_login
-Body: none
-```
-
 **Response:**
 ```json
 {
@@ -340,13 +327,6 @@ Headers: Content-Type: application/json
 ### Check Lockout Status
 ```http
 GET /api/auth/lockout-status
-```
-
-**Request:**
-```http
-Method: GET
-Headers: none
-Body: none
 ```
 
 **Response:**
