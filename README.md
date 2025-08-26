@@ -187,6 +187,13 @@ VITE_APP_NAME=SafePass
 GET /api/challenge
 ```
 
+**Request**
+```http
+Method: GET
+Headers: none
+Body: none
+```
+
 **Response:**
 ```json
 {
@@ -211,24 +218,19 @@ GET /api/challenge
 ### Verify PIN (HMAC Protected)
 ```http
 POST /api/auth/verify-pin
-Content-Type: application/json
-X-HMAC-Signature: hmac_sha256_signature_hex
-X-Timestamp: timestamp_in_milliseconds
-X-Challenge-Token: challenge_token_from_above
 ```
 
-**Request Body:**
+**Request**
+```http
+Method: GET
+Headers: Content-Type: application/json
+Body: 
+```
 ```json
 {
-  "hashedPin": "sha256_hashed_pin_hex"
+  "pin": "12345"
 }
 ```
-
-**HMAC Generation:**
-Client must generate HMAC-SHA256 using:
-- Data: JSON.stringify(request_body)
-- Message: `${data}|${challenge_token}|${timestamp}`
-- Key: SERVER_SECRET (configured server-side)
 
 **Success Response:**
 ```json
@@ -236,8 +238,8 @@ Client must generate HMAC-SHA256 using:
   "success": true,
   "message": "PIN verified successfully",
   "data": {
-    "sessionId": "64char_secure_session_id",
-    "expiresAt": 1640996700000
+    "sessionId": "session-uuid",
+    "expiresAt": 1690000300000
   }
 }
 ```
@@ -285,7 +287,13 @@ Client must generate HMAC-SHA256 using:
 ### Check Session Status
 ```http
 GET /api/auth/session-status
-X-Session-Id: session_id_from_login
+```
+
+**Request**
+```http
+Method: GET
+Headers: X-Session-Id: session_id_from_login
+Body: none
 ```
 
 **Response:**
@@ -309,14 +317,15 @@ X-Session-Id: session_id_from_login
 
 ### Logout (HMAC Protected)
 ```http
-POST /api/auth/logout
-Content-Type: application/json
-X-HMAC-Signature: hmac_signature
-X-Timestamp: timestamp
-X-Challenge-Token: challenge_token
+POST /api/auth/verify-pin
 ```
 
-**Request Body:**
+**Request**
+```http
+Method: GET
+Headers: Content-Type: application/json
+Body: 
+```
 ```json
 {
   "sessionId": "session_id_to_invalidate"
@@ -338,6 +347,13 @@ X-Challenge-Token: challenge_token
 GET /api/auth/lockout-status
 ```
 
+**Request**
+```http
+Method: GET
+Headers: none
+Body: none
+```
+
 **Response:**
 ```json
 {
@@ -347,63 +363,6 @@ GET /api/auth/lockout-status
     "attemptsRemaining": 5,
     "lockoutExpiresAt": null,
     "nextAttemptAllowedAt": null
-  }
-}
-```
-
-## HMAC Testing Endpoints (Development Only)
-
-### Get HMAC Statistics
-```http
-GET /api/hmac/stats
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "hmacStats": {
-      "totalRequests": 150,
-      "validHMACs": 145,
-      "invalidHMACs": 3,
-      "expiredRequests": 2,
-      "malformedRequests": 0,
-      "successRate": "96.67%"
-    },
-    "serverTime": 1640994900000,
-    "windowSize": 300000
-  }
-}
-```
-
-### Test HMAC Generation
-```http
-POST /api/hmac/test
-Content-Type: application/json
-```
-
-**Request Body:**
-```json
-{
-  "data": "test-data",
-  "challengeToken": "challenge_token_here",
-  "timestamp": 1640994900000
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "originalData": "test-data",
-    "challengeToken": "challenge_token_here",
-    "timestamp": 1640994900000,
-    "generatedHMAC": "hmac_signature_hex",
-    "verificationResult": true,
-    "timestampValid": true,
-    "serverTime": 1640994900000
   }
 }
 ```

@@ -4,7 +4,7 @@ const axios = require('axios');
 // Configuration - Update these according to your .env file
 const CONFIG = {
     API_BASE: 'http://localhost:3001',
-    SERVER_SECRET: 'my_super_secret_key', // EXACT match with .env
+    SERVER_SECRET: 'server_pin_secret_9sd8f7a', // EXACT match with .env
     PIN: '123456', // Update with your MASTER_PIN from .env
     VERBOSE: true
 };
