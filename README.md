@@ -214,9 +214,6 @@ POST /api/auth/verify-pin
 ```
 
 **Request:**
-```http
-Headers: Content-Type: application/json
-```
 ```json
 {
   "pin": "12345"
@@ -305,9 +302,6 @@ POST /api/auth/verify-pin
 ```
 
 **Request:**
-```http
-Headers: Content-Type: application/json
-```
 ```json
 {
   "sessionId": "session_id_to_invalidate"
