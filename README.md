@@ -224,7 +224,6 @@ POST /api/auth/verify-pin
 Headers: Content-Type: application/json
 ```
 ```json
-Body: 
 {
   "pin": "12345"
 }
@@ -323,7 +322,6 @@ POST /api/auth/verify-pin
 Headers: Content-Type: application/json
 ```
 ```json
-Body: 
 {
   "sessionId": "session_id_to_invalidate"
 }
