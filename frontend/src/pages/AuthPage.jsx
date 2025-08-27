@@ -24,9 +24,6 @@ const AuthPage = () => {
     }
   };
 
-  console.log("SECRET:", import.meta.env.VITE_SECRET);
-  console.log("API_BASE_URL:", import.meta.env.VITE_API_BASE_URL);
-  
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-800">
       {/* Main Content */}
