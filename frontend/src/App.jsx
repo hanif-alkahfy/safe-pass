@@ -36,7 +36,7 @@ function App() {
     // Test backend connection
     const checkBackend = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL?.replace("/api", "") || "http://localhost:3001"}/health`,{
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL?.replace("/api", "") || "https://3efc92b6d6ea.ngrok-free.app"}/health`,{
           headers: {
             'ngrok-skip-browser-warning': 'true'
           }
