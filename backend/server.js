@@ -38,7 +38,7 @@ app.use(enhancedSecurityHeaders);
 // CORS configuration for Vite dev server
 app.use(
   cors({
-    origin: "*", // Allow all origins in development
+    origin: "https://safepass-x.vercel.app/", // Allow all origins in development
     credentials: true,
     methods: ["GET", "POST", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Challenge-Token", "X-HMAC-Signature", "X-CSRF-Token", "X-Session-Token", "X-Timestamp", "X-Session-Id"],
@@ -190,7 +190,7 @@ process.on("SIGINT", () => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log("🚀 SafePass backend server started successfully!");
   console.log(`📡 Port: ${PORT}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV}`);

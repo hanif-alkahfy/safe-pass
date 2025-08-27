@@ -6,7 +6,11 @@ const SECRET = import.meta.env.VITE_SECRET;
 export const authService = {
   async getChallengeToken() {
     try {
-      const response = await fetch(`${API_BASE}/api/challenge`);
+      const response = await fetch(`${API_BASE}/api/challenge`, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true'
+        }
+      });
       const data = await response.json();
 
       if (!data.success) {
@@ -50,6 +54,7 @@ export const authService = {
       const response = await fetch(`${API_BASE}/api/auth/verify-pin`, {
         method: "POST",
         headers: {
+          'ngrok-skip-browser-warning': 'true',
           "Content-Type": "application/json",
           "X-HMAC-Signature": hmacSignature,
           "X-Timestamp": timestamp.toString(),
@@ -83,6 +88,7 @@ export const authService = {
     try {
       const response = await fetch(`${API_BASE}/api/auth/session-status`, {
         headers: {
+          'ngrok-skip-browser-warning': 'true',
           "X-Session-Id": sessionId,
         },
       });
@@ -113,6 +119,7 @@ export const authService = {
       const response = await fetch(`${API_BASE}/api/auth/logout`, {
         method: "POST",
         headers: {
+          'ngrok-skip-browser-warning': 'true',
           "Content-Type": "application/json",
           "X-HMAC-Signature": hmacSignature,
           "X-Timestamp": timestamp.toString(),
