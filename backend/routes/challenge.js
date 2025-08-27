@@ -45,7 +45,9 @@ router.get('/challenge', challengeRateLimiter, (req, res) => {
       expiresAt: new Date(challengeResult.expiresAt).toISOString(),
       expiresIn: challengeResult.expiresIn,
       timestamp: new Date().toISOString(),
-      ...(stats && { stats })
+      // ...(process.env.NODE_ENV === "development" && {
+      // ...(stats && { stats })
+      // })
     };
 
     // Set security headers

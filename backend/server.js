@@ -38,10 +38,10 @@ app.use(enhancedSecurityHeaders);
 // CORS configuration for Vite dev server
 app.use(
   cors({
-    origin: "https://safepass-x.vercel.app/", // Allow all origins in development
+    origin: "https://safepass-x.vercel.app", // Allow all origins in development
     credentials: true,
     methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Challenge-Token", "X-HMAC-Signature", "X-CSRF-Token", "X-Session-Token", "X-Timestamp", "X-Session-Id"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Challenge-Token", "X-HMAC-Signature", "X-CSRF-Token", "X-Session-Token", "X-Timestamp", "X-Session-Id", 'ngrok-skip-browser-warning'],
     exposedHeaders: ["X-Request-ID", "X-Rate-Limit-Limit", "X-Rate-Limit-Remaining", "X-Rate-Limit-Reset"],
     optionsSuccessStatus: 200,
   })
@@ -106,15 +106,15 @@ app.get("/health", healthCheckLimiter, (req, res) => {
     uptime: `${Math.floor(uptime / 60)}m ${Math.floor(uptime % 60)}s`,
     timestamp: new Date().toISOString(),
     version: "1.0.0",
-    environment: process.env.NODE_ENV,
+    // environment: process.env.NODE_ENV,
     memory: {
       used: Math.round(memoryUsage.heapUsed / 1024 / 1024) + "MB",
       total: Math.round(memoryUsage.heapTotal / 1024 / 1024) + "MB",
     },
     // Include token stats in development
-    ...(process.env.NODE_ENV === "development" && {
-      tokenStats: require("./middleware/security").challengeTokenManager.getStats(),
-    }),
+    // ...(process.env.NODE_ENV === "development" && {
+    //   tokenStats: require("./middleware/security").challengeTokenManager.getStats(),
+    // }),
   });
 });
 
